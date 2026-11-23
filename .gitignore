@@ -1,0 +1,56 @@
+# Operating systems
+.DS_Store
+.AppleDouble
+.LSOverride
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Editors and IDEs
+.idea/
+.vscode/
+*.sublime-workspace
+*.swp
+*.swo
+*~
+
+# Local environment and configuration
+.env
+.env.*
+!.env.example
+*.local
+
+# Logs, caches, and temporary files
+*.log
+*.tmp
+*.temp
+*.bak
+.cache/
+tmp/
+temp/
+
+# Android / Gradle
+local.properties
+.gradle/
+build/
+**/build/
+.kotlin/
+.cxx/
+.externalNativeBuild/
+captures/
+*.apk
+*.aab
+*.ap_
+*.dex
+*.class
+output-metadata.json
+lint-results*.html
+lint-results*.xml
+
+# Signing material and local SDK/IDE configuration
+*.jks
+*.keystore
+*.p12
+*.pfx
+signingConfig.properties
