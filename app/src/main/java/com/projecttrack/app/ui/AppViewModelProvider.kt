@@ -6,6 +6,7 @@ import androidx.lifecycle.viewmodel.CreationExtras
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.projecttrack.app.ProjectTrackApplication
+import com.projecttrack.app.ui.backup.BackupViewModel
 import com.projecttrack.app.ui.files.FilesViewModel
 import com.projecttrack.app.ui.nodes.NodeDetailViewModel
 import com.projecttrack.app.ui.nodes.NodeEditViewModel
@@ -73,6 +74,9 @@ object AppViewModelProvider {
                 savedStateHandle = createSavedStateHandle(),
                 fileRepository = projectTrackApplication().container.fileRepository,
             )
+        }
+        initializer {
+            BackupViewModel(projectTrackApplication().container.backupManager)
         }
     }
 

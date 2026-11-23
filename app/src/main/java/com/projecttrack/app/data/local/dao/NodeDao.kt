@@ -27,6 +27,9 @@ interface NodeDao {
     @Query("SELECT * FROM nodes WHERE id = :nodeId")
     suspend fun getById(nodeId: Long): NodeEntity?
 
+    @Query("SELECT * FROM nodes ORDER BY id ASC")
+    suspend fun getAll(): List<NodeEntity>
+
     @Insert
     suspend fun insert(node: NodeEntity): Long
 

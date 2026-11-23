@@ -14,6 +14,9 @@ import com.projecttrack.app.data.local.entity.NoteEntity
 import com.projecttrack.app.data.local.entity.NodeEntity
 import com.projecttrack.app.data.local.entity.ProjectEntity
 
+/** 当前 Room schema 版本；备份 manifest 与数据库版本均引用它。 */
+const val PROJECT_TRACK_DATABASE_VERSION = 1
+
 @Database(
     entities = [
         ProjectEntity::class,
@@ -21,8 +24,8 @@ import com.projecttrack.app.data.local.entity.ProjectEntity
         NoteEntity::class,
         FileEntity::class,
     ],
-    version = 1,
-    exportSchema = false,
+    version = PROJECT_TRACK_DATABASE_VERSION,
+    exportSchema = true,
 )
 @TypeConverters(FileCategoryConverter::class)
 abstract class ProjectTrackDatabase : RoomDatabase() {

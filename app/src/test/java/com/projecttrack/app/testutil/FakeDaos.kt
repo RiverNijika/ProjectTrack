@@ -30,6 +30,8 @@ class FakeProjectDao : ProjectDao {
     override suspend fun getById(projectId: Long): ProjectEntity? =
         projects.value.firstOrNull { it.id == projectId }
 
+    override suspend fun getAll(): List<ProjectEntity> = projects.value.sortedBy { it.id }
+
     override suspend fun insert(project: ProjectEntity): Long {
         val newId = if (project.id != 0L) project.id else nextId(projects.value.map { it.id })
         projects.value = projects.value + project.copy(id = newId)
@@ -65,6 +67,8 @@ class FakeNodeDao : NodeDao {
 
     override suspend fun getById(nodeId: Long): NodeEntity? =
         nodes.value.firstOrNull { it.id == nodeId }
+
+    override suspend fun getAll(): List<NodeEntity> = nodes.value.sortedBy { it.id }
 
     override suspend fun insert(node: NodeEntity): Long {
         val newId = if (node.id != 0L) node.id else nextId(nodes.value.map { it.id })
@@ -105,6 +109,8 @@ class FakeNoteDao : NoteDao {
 
     override suspend fun getById(noteId: Long): NoteEntity? =
         notes.value.firstOrNull { it.id == noteId }
+
+    override suspend fun getAll(): List<NoteEntity> = notes.value.sortedBy { it.id }
 
     override suspend fun insert(note: NoteEntity): Long {
         val newId = if (note.id != 0L) note.id else nextId(notes.value.map { it.id })

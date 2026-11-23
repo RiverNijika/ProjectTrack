@@ -1,10 +1,12 @@
 package com.projecttrack.app.data.repository
 
+import com.projecttrack.app.data.DataMutationGuard
 import com.projecttrack.app.data.file.FileImporter
 import com.projecttrack.app.data.file.FileStorage
 import com.projecttrack.app.data.file.TextPreviewResult
 import com.projecttrack.app.data.local.dao.FileDao
 import com.projecttrack.app.data.local.dao.FileWithNameRow
+import com.projecttrack.app.data.local.dao.NodeDao
 import com.projecttrack.app.data.local.dao.ProjectDao
 import com.projecttrack.app.data.local.toModel
 import com.projecttrack.app.data.model.FileCategory
@@ -27,11 +29,13 @@ sealed interface FileDeleteResult {
 class FileRepository(
     private val fileDao: FileDao,
     private val projectDao: ProjectDao,
+    nodeDao: NodeDao,
     private val storage: FileStorage,
     private val transactions: TransactionRunner,
     private val clock: () -> Long = System::currentTimeMillis,
+    private val mutationGuard: DataMutationGuard = DataMutationGuard(),
 ) {
-    private val importer = FileImporter(storage, fileDao, projectDao, transactions, clock)
+    private val importer = FileImporter(storage, fileDao, projectDao, nodeDao, transactions, clock)
 
     fun observeAllFiles(): Flow<List<FileRow>> =
         fileDao.observeAll().map { rows -> rows.toFileRows() }.flowOn(Dispatchers.IO)
@@ -52,24 +56,26 @@ class FileRepository(
         nodeId: Long?,
         meta: ImportFileMeta,
         openStream: () -> InputStream?,
-    ): FileImporter.Result = importer.import(projectId, nodeId, meta, openStream)
+    ): FileImporter.Result = mutationGuard.withMutation {
+        importer.import(projectId, nodeId, meta, openStream)
+    }
 
     /**
      * 删除文件：先删除磁盘副本，成功后再删除数据库记录；文件已经不存在时直接清理记录。
      */
-    suspend fun deleteFile(fileId: Long): FileDeleteResult {
-        val entity = fileDao.getById(fileId) ?: return FileDeleteResult.NotFound
+    suspend fun deleteFile(fileId: Long): FileDeleteResult = mutationGuard.withMutation {
+        val entity = fileDao.getById(fileId) ?: return@withMutation FileDeleteResult.NotFound
         val fileDeleted = if (storage.exists(entity.relativePath)) {
             storage.delete(entity.relativePath)
         } else {
             true
         }
-        if (!fileDeleted) return FileDeleteResult.FileDeleteFailed
+        if (!fileDeleted) return@withMutation FileDeleteResult.FileDeleteFailed
         transactions.run {
             fileDao.deleteById(fileId)
             projectDao.touch(entity.projectId, clock())
         }
-        return FileDeleteResult.Deleted
+        FileDeleteResult.Deleted
     }
 
     suspend fun readTextPreview(fileId: Long, maxBytes: Long? = null): TextPreviewResult? {
@@ -88,8 +94,9 @@ class FileRepository(
         category == FileCategory.TEXT
 
     /** 清理超过 24 小时仍未被数据库引用的孤立文件，返回清理数量。 */
-    suspend fun cleanupOrphanFiles(now: Long = clock()): Int =
+    suspend fun cleanupOrphanFiles(now: Long = clock()): Int = mutationGuard.withMutation {
         storage.deleteOrphanFiles(referencedPaths = fileDao.allPaths().toSet(), now = now)
+    }
 
     private fun List<FileWithNameRow>.toFileRows(): List<FileRow> = map { it.toFileRow() }
 

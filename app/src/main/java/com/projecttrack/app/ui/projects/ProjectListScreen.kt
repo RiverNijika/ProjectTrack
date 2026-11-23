@@ -1,6 +1,6 @@
 package com.projecttrack.app.ui.projects
 
-import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material3.Card
@@ -45,6 +46,7 @@ fun ProjectListScreen(
     onCreateProject: () -> Unit,
     onOpenProject: (Long) -> Unit,
     onOpenAllFiles: () -> Unit,
+    onOpenBackup: () -> Unit,
     viewModel: ProjectListViewModel = viewModel(factory = AppViewModelProvider.Factory),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -77,30 +79,66 @@ fun ProjectListScreen(
             )
         },
     ) { innerPadding ->
-        when {
-            uiState.isLoading -> LoadingState(modifier = Modifier.padding(innerPadding))
-            uiState.error != null -> ErrorState(
-                message = uiState.error.orEmpty(),
-                modifier = Modifier.padding(innerPadding),
-            )
-            uiState.projects.isEmpty() -> EmptyState(
-                title = "还没有项目",
-                description = "创建一个项目，然后随时记录进度节点、文字记录和文件资料。所有数据只保存在本机。",
-                modifier = Modifier.padding(innerPadding),
-                actionLabel = "新建项目",
-                onAction = onCreateProject,
-            )
-            else -> LazyColumn(
-                modifier = Modifier.fillMaxSize().padding(innerPadding),
-                contentPadding = PaddingValues(top = 8.dp, bottom = 96.dp),
-            ) {
-                items(items = uiState.projects, key = { it.project.id }) { summary ->
-                    ProjectSummaryCard(
-                        summary = summary,
-                        onClick = { onOpenProject(summary.project.id) },
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding),
+        ) {
+            BackupEntryCard(onClick = onOpenBackup)
+            Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                when {
+                    uiState.isLoading -> LoadingState()
+                    uiState.error != null -> ErrorState(message = uiState.error.orEmpty())
+                    uiState.projects.isEmpty() -> EmptyState(
+                        title = "还没有项目",
+                        description = "创建一个项目，然后随时记录进度节点、文字记录和文件资料。所有数据只保存在本机。",
+                        actionLabel = "新建项目",
+                        onAction = onCreateProject,
                     )
+                    else -> LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(top = 8.dp, bottom = 96.dp),
+                    ) {
+                        items(items = uiState.projects, key = { it.project.id }) { summary ->
+                            ProjectSummaryCard(
+                                summary = summary,
+                                onClick = { onOpenProject(summary.project.id) },
+                            )
+                        }
+                    }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun BackupEntryCard(onClick: () -> Unit) {
+    Card(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "备份与恢复",
+                    style = MaterialTheme.typography.titleSmall,
+                )
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    text = "导出完整本地备份，或恢复项目副本",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Icon(
+                Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     }
 }

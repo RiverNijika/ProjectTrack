@@ -18,6 +18,9 @@ interface ProjectDao {
     @Query("SELECT * FROM projects WHERE id = :projectId")
     suspend fun getById(projectId: Long): ProjectEntity?
 
+    @Query("SELECT * FROM projects ORDER BY id ASC")
+    suspend fun getAll(): List<ProjectEntity>
+
     @Insert
     suspend fun insert(project: ProjectEntity): Long
 

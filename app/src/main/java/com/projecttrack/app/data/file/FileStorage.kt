@@ -1,7 +1,9 @@
 package com.projecttrack.app.data.file
 
 import com.projecttrack.app.data.file.FileTypeClassifier.extensionOf
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
 import java.io.File
@@ -68,15 +70,19 @@ class FileStorage(private val filesRoot: File) {
     }
 
     /**
-     * 流式复制输入流到目标相对路径。失败时删除不完整文件并抛出异常。
+     * 流式复制输入流到目标相对路径。失败或取消时删除不完整/未被调用方接收的文件，
      * 返回实际写入的字节数。
+     *
+     * 注意：`withContext` 可能在块已正常执行完毕后，因协程取消在返回调用方时抛出
+     * `CancellationException`。因此取消清理放在 `withContext` 外层，避免留下完整但
+     * 未被数据库/调用方确认的附件。
      */
-    suspend fun copyFromStream(relativePath: String, openStream: () -> InputStream?): Long =
-        withContext(Dispatchers.IO) {
-            val target = storedFile(relativePath)
-            target.parentFile?.mkdirs()
-            var totalBytes = 0L
-            try {
+    suspend fun copyFromStream(relativePath: String, openStream: () -> InputStream?): Long {
+        val target = storedFile(relativePath)
+        return try {
+            withContext(Dispatchers.IO) {
+                target.parentFile?.mkdirs()
+                var totalBytes = 0L
                 val input = openStream() ?: throw IOException("无法打开源文件")
                 input.use { source ->
                     target.outputStream().buffered().use { output ->
@@ -92,11 +98,15 @@ class FileStorage(private val filesRoot: File) {
                     }
                 }
                 totalBytes
-            } catch (throwable: Throwable) {
-                target.delete()
-                throw throwable
             }
+        } catch (cancellation: CancellationException) {
+            withContext(NonCancellable) { target.delete() }
+            throw cancellation
+        } catch (error: Throwable) {
+            target.delete()
+            throw error
         }
+    }
 
     suspend fun delete(relativePath: String): Boolean = withContext(Dispatchers.IO) {
         val target = storedFile(relativePath)

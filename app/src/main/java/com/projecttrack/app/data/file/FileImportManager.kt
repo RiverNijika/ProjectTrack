@@ -2,6 +2,7 @@ package com.projecttrack.app.data.file
 
 import android.net.Uri
 import com.projecttrack.app.data.repository.FileRepository
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -48,6 +49,8 @@ class FileImportManager(
             uris.forEachIndexed { index, uri ->
                 val meta = try {
                     metadataResolver.resolve(uri)
+                } catch (cancellation: CancellationException) {
+                    throw cancellation
                 } catch (error: Exception) {
                     failures += "无法读取所选文件：${error.message ?: "未知错误"}"
                     _status.value = Status.Running(index + 1, uris.size, null)
@@ -60,6 +63,8 @@ class FileImportManager(
                 )
                 when (val result = try {
                     fileRepository.importFile(projectId, nodeId, meta) { metadataResolver.openStream(uri) }
+                } catch (cancellation: CancellationException) {
+                    throw cancellation
                 } catch (error: Exception) {
                     null
                 }) {

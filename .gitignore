@@ -54,3 +54,13 @@ lint-results*.xml
 *.p12
 *.pfx
 signingConfig.properties
+
+# Local backup files, database copies and test media (never commit user data)
+*.ptbackup
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+test-media/

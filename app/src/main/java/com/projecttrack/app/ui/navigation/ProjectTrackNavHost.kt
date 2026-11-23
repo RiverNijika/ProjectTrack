@@ -7,6 +7,7 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
+import com.projecttrack.app.ui.backup.BackupScreen
 import com.projecttrack.app.ui.files.FilesScreen
 import com.projecttrack.app.ui.nodes.NodeDetailScreen
 import com.projecttrack.app.ui.nodes.NodeEditScreen
@@ -30,6 +31,8 @@ object Routes {
     fun projectFiles(projectId: Long): String = "projects/$projectId/files"
 
     const val GLOBAL_FILES = "files"
+
+    const val BACKUP = "backup"
 
     const val NODE_DETAIL = "nodes/{nodeId}"
     fun nodeDetail(nodeId: Long): String = "nodes/$nodeId"
@@ -63,7 +66,12 @@ fun ProjectTrackNavHost(
                     navController.navigate(Routes.projectDetail(projectId))
                 },
                 onOpenAllFiles = { navController.navigate(Routes.GLOBAL_FILES) },
+                onOpenBackup = { navController.navigate(Routes.BACKUP) },
             )
+        }
+
+        composable(Routes.BACKUP) {
+            BackupScreen(onBack = { navController.popBackStack() })
         }
 
         composable(

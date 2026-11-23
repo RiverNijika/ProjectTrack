@@ -5,6 +5,7 @@ import com.projecttrack.app.data.model.FileCategory
 import com.projecttrack.app.data.model.ImportFileMeta
 import com.projecttrack.app.data.repository.TransactionRunner
 import com.projecttrack.app.testutil.FakeFileDao
+import com.projecttrack.app.testutil.FakeNodeDao
 import com.projecttrack.app.testutil.FakeProjectDao
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
@@ -26,6 +27,7 @@ class FileImporterTest {
     private lateinit var storage: FileStorage
     private lateinit var fileDao: FakeFileDao
     private lateinit var projectDao: FakeProjectDao
+    private lateinit var nodeDao: FakeNodeDao
     private lateinit var importer: FileImporter
 
     private val passthroughTransactions = object : TransactionRunner {
@@ -38,6 +40,7 @@ class FileImporterTest {
             storage = FileStorage(tempFolder.newFolder("files"))
             fileDao = FakeFileDao()
             projectDao = FakeProjectDao()
+            nodeDao = FakeNodeDao()
             projectDao.insert(
                 ProjectEntity(
                     id = 1L,
@@ -51,6 +54,7 @@ class FileImporterTest {
                 storage = storage,
                 fileDao = fileDao,
                 projectDao = projectDao,
+                nodeDao = nodeDao,
                 transactions = passthroughTransactions,
                 clock = { 1000L },
             )
@@ -110,7 +114,7 @@ class FileImporterTest {
 
     @Test
     fun copyFailureLeavesNeitherFileNorDatabaseRow() = runBlocking {
-        val result = importer.import(1L, 99L, meta("broken.bin", "application/octet-stream")) {
+        val result = importer.import(1L, null, meta("broken.bin", "application/octet-stream")) {
             throw IOException("模拟读取失败")
         }
 
