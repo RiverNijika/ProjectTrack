@@ -6,9 +6,9 @@
 
 请勿在公开问题、讨论区或拉取请求中披露尚未修复的安全漏洞，也不要附带可直接滥用的敏感信息。
 
-当前私密漏洞报告渠道尚未建立，公开发布前必须补充维护者联系方式或其他私密报告方式。
+请优先通过 [GitHub Security Advisories](https://github.com/RiverNijika/ProjectTrack/security/advisories) 提交私密报告。该仓库已启用 Private Vulnerability Reporting；在页面中选择“Report a vulnerability”即可向维护者发送非公开漏洞信息。
 
-渠道建立后，报告应尽量包含：
+报告应尽量包含：
 
 - 受影响的版本或提交。
 - 漏洞影响和可能的攻击场景。
@@ -17,7 +17,7 @@
 
 ## 响应流程
 
-私密报告渠道建立后，维护者应按以下原则处理漏洞：
+通过私密渠道收到报告后，维护者应按以下原则处理漏洞：
 
 1. 确认收到报告并评估影响。
 2. 与报告者保持沟通，必要时请求补充信息。
@@ -38,9 +38,9 @@
 
 Do not disclose unfixed security vulnerabilities in public issues, discussions, or pull requests, and do not include sensitive information that could be directly abused.
 
-A private vulnerability-reporting channel has not yet been established. Maintainer contact details or another private reporting method must be added before public release.
+Please submit private reports through [GitHub Security Advisories](https://github.com/RiverNijika/ProjectTrack/security/advisories). Private Vulnerability Reporting is enabled for this repository; select “Report a vulnerability” on that page to send non-public information to the maintainers.
 
-Once a channel is available, reports should include where possible:
+Reports should include where possible:
 
 - The affected version or commit.
 - The vulnerability's impact and potential attack scenario.
@@ -49,7 +49,7 @@ Once a channel is available, reports should include where possible:
 
 ## Response Process
 
-After a private reporting channel is established, maintainers should:
+After receiving a report through the private channel, maintainers should:
 
 1. Acknowledge the report and assess its impact.
 2. Communicate with the reporter and request additional information when necessary.
