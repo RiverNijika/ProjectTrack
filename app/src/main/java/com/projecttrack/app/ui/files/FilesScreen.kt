@@ -137,7 +137,7 @@ fun FilesScreen(
         floatingActionButton = {
             ExtendedFloatingActionButton(
                 onClick = { importLauncher.launch(arrayOf("*/*")) },
-                icon = { Icon(Icons.Default.Add, contentDescription = null) },
+                icon = { Icon(Icons.Default.Add, contentDescription = "导入文件") },
                 text = { Text("导入文件") },
             )
         },

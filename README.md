@@ -55,6 +55,7 @@ ProjectTrack 是一款完全本地化的 Android 项目进度跟踪应用。它�
 - 文件会使用新的唯一内部名称复制，不能覆盖现有附件；重复恢复同一备份会产生重复项目，操作前的确认提示会明确说明这一点。
 - 所有附件复制完成后再在一个 Room 事务中写入元数据；失败或取消时会删除本次新复制的附件并清理解压临时目录，Room 事务回滚，现有数据保持不变。
 - 取消语义：在进入最终数据库提交前取消，会清理本次附件和临时目录并向上传递取消；最终提交使用短暂的不可取消临界区，提交会完整结束。提交完成后按成功处理，不会删除已入库附件，也不会把已完成的恢复显示成“已取消/未修改”。
+- 提交边界修复（2026-11-24）：真实 Room 在 API 36 上暴露了 `withContext(NonCancellable)` 的返回边界竞态——事务 block 已完成并提交，但退出 `NonCancellable` 回到已取消的外部协程时仍可能抛出 `CancellationException`。现在用“提交结果持有器”区分“事务已返回”与“提交前/提交中被取消”：已提交时直接返回成功且不清理附件；未提交时才清理。ZIP 解压、SHA-256 和附件复制仍保持可取消。
 - 恢复失败、校验失败或用户取消时不会显示成功，也不会删除或修改现有数据。
 - ZIP 安全：拒绝绝对路径、`..` 路径穿越、反斜杠、目录条目、重复条目、未知条目和越界附件路径；对条目数量、JSON 大小、单附件大小和附件总大小设有上限。
 - 备份格式版本从 1 开始；当前只支持格式版本 1 和数据库 schema 版本 1，未知或不兼容版本会被明确拒绝，不进行部分恢复。
@@ -114,6 +115,62 @@ ProjectTrack 的人类项目所有者是项目的**发起人、产品负责人�
 - Storage Access Framework、FileProvider、Media3/ExoPlayer。
 - `minSdk 26`、`compileSdk 37`、`targetSdk 37`；applicationId 为 `com.projecttrack.app`。
 
+## Android 版本支持与设备验收（第三阶段）
+
+### 支持范围与单 APK 策略
+
+- 单一通用 APK，`minSdk 26`（Android 8.0），`compileSdk/targetSdk 37`。
+- 不为红米或其他品牌维护单独分支、私有实现或按型号分包；同一 APK 面向兼容范围内的设备。
+- 目标兼容范围是 API 26 至 37。这是设计目标，**不等于所有 Android 版本都已实测**。
+- 实际验证过的设备/版本只有下表；未列出的版本和未列出的厂商均未验证。
+
+| 设备 | 型号/代号 | Android / API | ROM | ABI | 实际结果 |
+| --- | --- | --- | --- | --- | --- |
+| Redmi | M511CD / athens | Android 17 / API 37 | HyperOS OS4.0（V816），安全补丁 2026-10-01 | arm64-v8a | 已安装 Debug APK，完成项目/节点/记录、SAF 导入、预览、备份导出与真实恢复、旋转/重启等验收；修复后完整仪器测试 14/14，提交取消重点用例连续 3/3 |
+| Google Android Emulator | sdk_gphone64_x86_64 / emu64xa | Android 16 / API 36 | Google userdebug `BE2A.250530.026.F3`，安全补丁 2025-07-05 | x86_64 | 修复后提交边界回归：原失败单测 5/5，完整套件 14/14 连续 2 次 |
+
+- 本轮实际使用 `emulator-5554`（API 36）完成提交边界修复回归；**API 26、29、31、32、33 以及其它设备/ROM 未验证**。
+- 一台红米设备通过验收不代表兼容所有 Android 手机。发布前仍需覆盖代表性强的最低版本、存储边界版本和主流厂商 ROM。
+
+### 已执行的设备验收
+
+- 安装 Debug APK；创建/编辑项目，创建进展、暂停、阻塞等自定义节点，修改节点发生时间，添加项目记录和节点记录。
+- 删除节点后确认记录保留，并显示为未关联内容；应用强制停止和冷启动后数据仍在；横竖屏旋转后页面和文件仍在。
+- 通过真实 SAF 导入 WAV、MP4、TXT、JSON、Kotlin 代码、PNG、PDF、PPTX；导入 15 MB 大文件；两个同名 `same_name.txt` 内容不同且均保留。
+- 实际播放音频和视频，离开预览页后 ExoPlayer 释放；中文 UTF-8 文本、JSON 和代码可读；非法 UTF-8 明确拒绝预览；300 KB 文本显示“仅显示前 256 KB”的截断提示。
+- PNG、PDF、PPTX 不提供新增的内置预览，实际拉起系统 Resolver 进行外部打开（修复了 Application Context 缺少 `FLAG_ACTIVITY_NEW_TASK` 的真实 Android 运行时错误）。
+- 导出真实 `.ptbackup` ZIP 并拉取检查：manifest、data、13 个附件和附件 SHA-256/大小一致；在非空数据库上恢复成功，新增 1 项目、2 节点、2 记录、13 文件，原项目和附件未覆盖；恢复副本使用新 ID 和新的内部文件名。
+- 在真机 Android 文件系统 + Room 上验证缺附件、错误 SHA-256、损坏 JSON、ZIP 路径异常四类损坏备份均被整体拒绝，不新增数据或附件。
+- 真机 SAF 测试确认 provider 对同一文档 URI 的 `rwt` 写入会截断旧内容。HyperOS 的“另存为”界面对同名文件会自动改名为 `(1)`，因此无法用该 UI 构造真正的覆盖保存；应用采用 `rwt` 优先、`wt` 回退，不接受不保证截断的 `w`。部分文件提供方还会在保存后追加 `.zip`（实际文件名可能为 `.ptbackup.zip`）；恢复按 ZIP 内容、manifest 和数据库版本校验，不依赖扩展名。
+- 发现一次前台空白窗口（连续返回/外部打开后），强制停止并重启后未再复现，也没有崩溃日志；列为遗留风险，发布前继续观察。
+- 由于导出在 15 MB 数据下很快完成，未能在 UI 中拦到“取消任务”按钮；取消/提交边界由真机仪器测试和 JVM 测试覆盖，未把该场景写成人工取消已验证。
+
+### 设备测试命令与 USB 前提
+
+1. 在手机上开启开发者选项、USB 调试；HyperOS 还需开启“USB 安装/通过 USB 安装应用”，保持屏幕解锁。
+2. 连接电脑并确认授权：
+   ```bat
+   adb devices -l
+   ```
+3. 安装 Debug APK：
+   ```bat
+   adb install -r -t app\build\outputs\apk\debug\app-debug.apk
+   ```
+4. 运行 JVM 测试、Lint 和构建：
+   ```bat
+   gradlew.bat assembleDebug lint testDebugUnitTest
+   ```
+5. 运行真机仪器测试（推荐，不会在结束时卸载应用）：
+   ```bat
+   gradlew.bat connectedDebugAndroidTest "-Pandroid.injected.androidTest.leaveApksInstalledAfterRun=true"
+   ```
+   本轮结果（修复前）：Redmi M511CD / API 37 实际执行 **11 tests，0 failures，0 errors**；Gradle 同时发现一个未启动的 `emulator-5554`（API 36），在其上安装失败且未执行任何测试（0 tests）。修复提交边界后已在 API 36 模拟器执行 **14 tests，0 failures，0 errors**，连续完整套件 2 次通过；原失败单测连续 5 次通过。修复后已在 Redmi API 37 完成完整仪器测试 14/14，提交取消重点用例连续 3/3。
+   或先安装 `app-debug-androidTest.apk`，直接运行：
+   ```bat
+   adb shell am instrument -w com.projecttrack.app.test/androidx.test.runner.AndroidJUnitRunner
+   ```
+   默认的 `connectedDebugAndroidTest` 在部分 AGP 配置下会在结束后卸载应用；`leaveApksInstalledAfterRun=true` 用于保留应用数据。HyperOS 会阻止 instrumentation 进程直接启动 Activity，UI 测试通过 UiAutomation 以 shell 身份启动 Activity，并使用 debug-only 测试宿主验证空/错误状态；这是测试适配，不是产品功能。
+
 ## 环境要求与构建
 
 需要：
@@ -143,23 +200,30 @@ Debug APK 输出位置：`app/build/outputs/apk/debug/app-debug.apk`。构建产
 
 ## 测试与当前验证状态
 
-JVM 单元测试位于 `app/src/test/java/`，覆盖首阶段的文件类型识别、最新节点选择、节点删除后的资料保留、文件过滤、同名文件处理、流式复制、失败回滚、UTF-8 校验和孤立文件清理，以及第二阶段的备份/恢复完整往返、恢复到非空数据库、重复恢复、附件缺失/大小/SHA-256 校验、损坏 JSON/缺字段/无效关系/不支持版本、ZIP 路径穿越/绝对路径/重复条目、导出与恢复取消、读写与数据库失败回滚、跨项目关联拒绝、导出期间数据一致性、导出 JSON/条目预算边界和 Room schema 导出。提交竞争测试使用可控 `TransactionRunner` 模拟“DAO 已写入、事务尚未返回”的窗口，验证的是取消语义，不代表已在真实 Room 或真机上复现竞争。
+JVM 单元测试位于 `app/src/test/java/`，覆盖首阶段的文件类型识别、最新节点选择、节点删除后的资料保留、文件过滤、同名文件处理、流式复制、失败回滚、UTF-8 校验和孤立文件清理，以及第二阶段的备份/恢复完整往返、恢复到非空数据库、重复恢复、附件缺失/大小/SHA-256 校验、损坏 JSON/缺字段/无效关系/不支持版本、ZIP 路径穿越/绝对路径/重复条目、导出与恢复取消、读写与数据库失败回滚、跨项目关联拒绝、导出期间数据一致性、导出 JSON/条目预算边界和 Room schema 导出。JVM 提交竞争测试使用可控 `TransactionRunner` 模拟“DAO 已写入、事务尚未返回”的窗口；真实 Room 的提交取消边界另由 Android 仪器测试覆盖，不能把 JVM 模拟当作真实 Room 复现。
 
-截至 2026-11-23：
+Android 仪器测试位于 `app/src/androidTest/java/`，在真实设备上覆盖：真实 Room 外键/级联与节点 detach、真实 Room + 真实文件系统的非破坏性恢复和 ID 重映射、数据库失败回滚、真实 Room 提交边界取消（备份恢复与文件导入）、提交前取消清理、四类损坏备份拒绝、SAF `rwt` 截断、外部打开 Intent 必须带 `NEW_TASK`、Compose 主流程与空/错误状态。
+
+截至 2026-11-24：
 
 - `assembleDebug`：通过。
-- `testDebugUnitTest`：74 个用例，0 失败、0 错误；已强制重新执行确认（包含提交竞争与导出预算测试）。
-- `lint`：通过，存在非阻断警告。
-- APK 权限检查不含 INTERNET、相机、麦克风或外部存储权限。
+- `testDebugUnitTest`：**74 个用例，0 失败、0 错误、0 跳过**；强制重新执行确认。
+- `lint`：通过，**0 errors、4 warnings**。警告为既有非阻断项：lifecycle 自定义 lint 校验跳过、`enableOnBackInvokedCallback` 在 API 33+ 才使用、`allowBackup` 在新系统上的替代提示、`mipmap-anydpi-v26` 可合并；没有新增阻断问题。
+- Android 仪器测试（修复后）：API 36 模拟器 **14 个用例，0 失败、0 错误**，完整套件连续 2 次通过，原失败单测连续 5 次通过；Redmi M511CD / API 37 完整套件 **14/14**，提交取消重点用例连续 **3/3**。
+- Gradle `connectedDebugAndroidTest`（`leaveApksInstalledAfterRun=true`）：在 API 37 红米上曾通过 11/11（修复前），测试后应用数据保留；同一任务发现的 `emulator-5554` 当时未启动，0 tests。修复后的最终验证通过直接 `adb shell am instrument` 在 API 36 模拟器完成 14/14 × 2，并在 Redmi API 37 完成 14/14 及重点用例 3/3。
+- APK 权限检查不含 INTERNET、相机、麦克风或外部存储权限；APK 仅含应用自定义 `DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION`。
 - Room schema 已导出到 `app/schemas/`，数据库版本保持 1。
-- **尚未进行设备验证**：没有安装 APK，没有实际通过 SAF 导出/恢复备份，没有验证“覆盖旧备份后文件尾部无残留”、没有实际播放 MP3/MP4，也没有通过真实文件走查导入和外部打开。上述场景是发布前必须补做的验收项。
+- 设备验收已实际完成本项目记录中的主流程、SAF 导入、音频/视频播放、外部打开、备份导出与非破坏性恢复；API 26/29/31/32/33 和其它设备/ROM 未验证，不能宣称“兼容所有 Android 版本”。
 
 ## 后续优先事项与范围边界
 
 下一阶段优先事项：
 
-- 真机或模拟器完整验收，包括 SAF 备份导出/恢复、重复恢复和取消操作。
+- 在 API 26、29、31、32、33 及代表性厂商 ROM 上补做设备矩阵验收；发布前至少覆盖最低版本、存储边界版本和最新目标版本。
 - 为未来的 Room schema 变更补充迁移和迁移测试（当前版本 1）。
+- 在支持同名覆盖的 SAF 提供方上补做 UI 级覆盖导出并检查旧尾部；在较大备份下手工验证取消、失败清理和提交边界 UI。
+- 若后续修改事务提交或取消逻辑，需重新在 API 36 或等效环境中执行提交边界回归。
+- 调查一次性空白窗口现象（本轮未复现、无崩溃日志），确认是否与 HyperOS 返回/外部打开过渡有关。
 - 备份恢复的可用性改进（仍须保持非破坏性和完全本地化）。
 
 当前产品方向不包含图片、PDF、Office 文件的应用内预览，也不包含云同步、账号、多人协作、音频录制、视频拍摄、代码编辑、预设流程、甘特图或完成百分比。除非人类项目所有者后续明确调整方向，否则不应自行加入。
@@ -227,6 +291,7 @@ The project list exposes a visible “Backup and Restore” entry. Backup and re
 - File copies receive new unique internal names and cannot overwrite existing attachments. Restoring the same backup repeatedly creates duplicate projects; the confirmation prompt states this explicitly.
 - All attachments are copied before metadata is written in a single Room transaction. On failure or cancellation, newly copied attachments are deleted, the temporary extraction directory is removed, and the Room transaction rolls back, leaving existing data unchanged.
 - Cancellation semantics: cancelling before the final database commit cleans newly copied attachments and the temporary directory and propagates cancellation. The final commit runs in a short non-cancellable critical section and completes atomically. Once the commit has returned, the operation is treated as successful: committed attachments are never deleted, and a completed restore is never reported as “canceled/unmodified.”
+- Commit-boundary fix (November 24, 2026): real Room on API 36 exposed a return-boundary race in `withContext(NonCancellable)`. The transaction block had already completed and committed, but leaving the non-cancellable context back into a canceled outer coroutine could still throw `CancellationException`. A commit-result holder now distinguishes “transaction returned” from “canceled before/during commit”: a returned commit yields success and never deletes attachments; only an uncommitted cancellation cleans up. ZIP extraction, SHA-256, and attachment copying remain cancellable.
 - A failed restore, validation failure, or user cancellation never reports success and never deletes or modifies existing data.
 - ZIP safety: absolute paths, `..` traversal, backslashes, directory entries, duplicate entries, unknown entries, and out-of-bounds attachment paths are rejected. Entry counts, JSON sizes, individual attachment sizes, and total attachment sizes are bounded.
 - The backup format starts at version 1. Only format version 1 and database schema version 1 are currently supported. Unknown or incompatible versions are rejected explicitly with no partial restore.
@@ -286,6 +351,62 @@ At present, architecture, code, tests, and documentation are primarily written b
 - Storage Access Framework, FileProvider, and Media3/ExoPlayer.
 - `minSdk 26`, `compileSdk 37`, and `targetSdk 37`; applicationId `com.projecttrack.app`.
 
+## Android Version Support and Device Acceptance (Phase Three)
+
+### Supported range and single-APK strategy
+
+- Single universal APK, `minSdk 26` (Android 8.0), `compileSdk/targetSdk 37`.
+- No brand-specific branches, private implementations, or per-model packages; one APK targets the supported range.
+- The target compatibility range is API 26 through 37. This is a design target, **not a claim that every Android version has been tested**.
+- Only the device/version in the table below was actually verified; unlisted versions and vendors are unverified.
+
+| Device | Model / codename | Android / API | ROM | ABI | Actual result |
+| --- | --- | --- | --- | --- | --- |
+| Redmi | M511CD / athens | Android 17 / API 37 | HyperOS OS4.0 (V816), security patch 2026-10-01 | arm64-v8a | Installed the Debug APK; completed project/node/note flow, SAF import, previews, real backup export/restore, rotation, restart, and more; post-fix full suite 14/14, focused commit-cancellation test 3/3 |
+| Google Android Emulator | sdk_gphone64_x86_64 / emu64xa | Android 16 / API 36 | Google userdebug `BE2A.250530.026.F3`, security patch 2025-07-05 | x86_64 | Post-fix commit-boundary regression: formerly failing single test 5/5; complete suite 14/14 twice |
+
+- This round used `emulator-5554` (API 36) for the commit-boundary fix verification; **API 26, 29, 31, 32, and 33, as well as other devices/ROMs, were not verified**.
+- One Redmi device passing does not mean compatibility with every Android phone. Before release, representative minimum-version, storage-boundary, and current-target devices/ROMs must still be covered.
+
+### Device acceptance performed
+
+- Installed the Debug APK; created/edited a project; created custom progress, paused, and blocked nodes; changed a node's occurrence time; added project and node notes.
+- Deleted a node and confirmed its records were retained as unassociated content; force-stopped and cold-started the app and confirmed data persisted; rotated landscape/portrait and confirmed the page and files survived.
+- Imported WAV, MP4, TXT, JSON, Kotlin code, PNG, PDF, and PPTX through real SAF; imported a 15 MB file; imported two different files sharing the display name `same_name.txt` without overwriting.
+- Actually played audio and video and verified ExoPlayer release after leaving the preview; read Chinese UTF-8 text, JSON, and code; rejected invalid UTF-8 with an explicit message; displayed the “only first 256 KB” warning for a 300 KB text file.
+- PNG, PDF, and PPTX had no new in-app preview and actually launched the system resolver for external opening (an Application Context `FLAG_ACTIVITY_NEW_TASK` runtime bug was fixed).
+- Exported a real `.ptbackup` ZIP and inspected it locally: manifest, data, 13 attachments, sizes, and SHA-256 were consistent. Restored into a non-empty database: 1 new project, 2 nodes, 2 notes, and 13 files were added; existing projects and attachments were not overwritten; restored copies received new IDs and internal file names.
+- On real Room plus the real Android filesystem, four corrupted backup classes (missing attachment, bad SHA-256, corrupt JSON, ZIP path anomaly) were rejected without adding data or attachments.
+- Real SAF verification confirmed that writing with `rwt` to the same provider document truncates the old content. HyperOS's save dialog auto-renames same-name files to `(1)`, so a true overwrite could not be constructed through that UI; the app prefers `rwt`, falls back to `wt`, and refuses non-truncating `w`. Some providers also append `.zip` after saving (the actual name may be `.ptbackup.zip`); restore validates the ZIP content, manifest, and database version and does not depend on the extension.
+- One transient blank foreground window was observed after repeated back/external-open interactions; it did not reproduce after force-stop/restart and no crash log was found. It remains a monitored risk.
+- The 15 MB export completed too quickly to intercept the “cancel” button in the UI; cancellation/commit-boundary semantics were covered by device instrumentation and JVM tests, and manual cancellation is not claimed as verified.
+
+### Device test commands and USB prerequisites
+
+1. Enable Developer options and USB debugging on the phone. HyperOS also requires “Install via USB”; keep the screen unlocked.
+2. Connect and authorize:
+   ```bat
+   adb devices -l
+   ```
+3. Install the Debug APK:
+   ```bat
+   adb install -r -t app\build\outputs\apk\debug\app-debug.apk
+   ```
+4. Run JVM tests, lint, and the build:
+   ```bat
+   gradlew.bat assembleDebug lint testDebugUnitTest
+   ```
+5. Run device instrumentation tests while keeping app data:
+   ```bat
+   gradlew.bat connectedDebugAndroidTest "-Pandroid.injected.androidTest.leaveApksInstalledAfterRun=true"
+   ```
+   The pre-fix run produced **11 tests, 0 failures, 0 errors** on the Redmi M511CD / API 37. Gradle also discovered a non-running `emulator-5554` (API 36), which ran **0 tests**. After the commit-boundary fix, the API 36 emulator ran the final **14 tests, 0 failures, 0 errors** twice in succession, and the formerly failing test passed 5 consecutive runs. The fixed build then passed the full 14/14 suite on Redmi API 37, with the focused commit-cancellation test passing 3 consecutive runs.
+   Alternatively install `app-debug-androidTest.apk` and run:
+   ```bat
+   adb shell am instrument -w com.projecttrack.app.test/androidx.test.runner.AndroidJUnitRunner
+   ```
+   Without `leaveApksInstalledAfterRun=true`, some AGP configurations uninstall the app after connected tests. HyperOS blocks instrumentation from starting Activities directly, so UI tests use UiAutomation shell launches and a debug-only test host for empty/error states; this is test adaptation, not a product feature.
+
 ## Requirements and Build
 
 Requirements:
@@ -315,23 +436,30 @@ The Debug APK is generated at `app/build/outputs/apk/debug/app-debug.apk`. Build
 
 ## Tests and Current Verification
 
-JVM unit tests under `app/src/test/java/` cover the phase-one behaviors (file classification, latest-node selection, content retention after node deletion, file filtering, duplicate names, streaming copies, rollback, UTF-8 validation, and orphan cleanup) plus phase-two backup/restore round trips, restoring into a non-empty database, repeated restores, missing/size/SHA-256 attachment validation, corrupt JSON, missing fields, invalid relationships, unsupported versions, ZIP path traversal/absolute paths/duplicate entries, export and restore cancellation, read/write/database failure rollback, cross-project relationship rejection, export consistency, export JSON/ZIP-entry budget boundaries, and Room schema export. Commit-race tests use a controllable `TransactionRunner` to simulate “DAO written, transaction not yet returned”; they verify cancellation semantics and do not claim that a race was reproduced on real Room or a physical device.
+JVM unit tests under `app/src/test/java/` cover the phase-one behaviors (file classification, latest-node selection, content retention after node deletion, file filtering, duplicate names, streaming copies, rollback, UTF-8 validation, and orphan cleanup) plus phase-two backup/restore round trips, restoring into a non-empty database, repeated restores, missing/size/SHA-256 attachment validation, corrupt JSON, missing fields, invalid relationships, unsupported versions, ZIP path traversal/absolute paths/duplicate entries, export and restore cancellation, read/write/database failure rollback, cross-project relationship rejection, export consistency, export JSON/ZIP-entry budget boundaries, and Room schema export. JVM commit-race tests use a controllable `TransactionRunner` to simulate “DAO written, transaction not yet returned”; the real-Room commit-boundary behavior is covered separately by Android instrumentation tests.
 
-As of November 23, 2026:
+Android instrumentation tests under `app/src/androidTest/java/` run on a real device and cover real Room foreign-key/cascade/detach behavior, non-destructive restore and ID remapping with real Room + the real filesystem, database failure rollback, real-Room commit-boundary cancellation for both backup restore and file import, pre-commit cleanup, four corrupted-backup rejections, SAF `rwt` truncation, the external-open `NEW_TASK` intent, and Compose main/empty/error flows.
+
+As of November 24, 2026:
 
 - `assembleDebug`: passed.
-- `testDebugUnitTest`: 74 tests, 0 failures, and 0 errors; forcibly rerun with the new commit-race and export-budget tests.
-- `lint`: passed with non-blocking warnings.
-- APK permission inspection found no Internet, camera, microphone, or external-storage permissions.
+- `testDebugUnitTest`: **74 tests, 0 failures, 0 errors, 0 skipped**; forcibly rerun.
+- `lint`: passed with **0 errors and 4 warnings**. The warnings are existing non-blocking items: lifecycle custom lint checks skipped, `enableOnBackInvokedCallback` only used on API 33+, an `allowBackup` replacement hint, and a mergeable `mipmap-anydpi-v26` folder.
+- Device instrumentation after the fix: the API 36 emulator passed **14 tests, 0 failures, 0 errors** twice in succession and the formerly failing test passed 5 consecutive runs; Redmi M511CD / API 37 passed the full suite **14/14**, with the focused commit-cancellation test passing **3/3**.
+- Gradle `connectedDebugAndroidTest` with `leaveApksInstalledAfterRun=true`: **11/11 passed on the pre-fix Redmi build**, and app data remained installed. The emulator discovered by that run was not yet booted and executed 0 tests. Final post-fix verification used direct `adb shell am instrument`: 14/14 twice on the API 36 emulator, then 14/14 on Redmi API 37 plus 3/3 focused commit-cancellation runs.
+- APK permission inspection found no Internet, camera, microphone, or external-storage permissions; only the app-defined `DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION` remains.
 - The Room schema is exported to `app/schemas/` and the database version remains 1.
-- **No device verification has been performed**: the APK has not been installed, SAF backup export/restore has not been exercised on a device, overwriting a larger backup and checking for stale tail bytes has not been tested, MP3/MP4 playback has not been tested, and real-file imports and external opening have not been verified. These are required before release.
+- Actual device acceptance covered the project/node/note flow, SAF imports, audio/video playback, external opening, backup export, and non-destructive restore. API 26/29/31/32/33 and other devices/ROMs were **not** verified, so “compatible with all Android versions” must not be claimed.
 
 ## Next Priorities and Scope Boundaries
 
 Next-phase priorities:
 
-- Complete emulator or physical-device acceptance testing, including SAF backup export/restore, repeated restore, and cancellation.
+- Extend device acceptance to API 26, 29, 31, 32, and 33 with representative OEM ROMs; before release, cover at minimum the minimum version, storage-boundary versions, and the current target.
+- If transaction-commit or cancellation logic changes again, rerun commit-boundary regression on API 36 or an equivalent environment.
 - Add migrations and migration tests for future Room schema changes (the current version is 1).
+- Exercise UI-level overwrite export on a SAF provider that supports same-name replacement, and verify stale-tail truncation there. Manually exercise cancellation, failure cleanup, and the commit-boundary UI with a larger backup.
+- Investigate the one-off blank-window observation (not reproduced in this round; no crash log) and determine whether it relates to HyperOS back/external-open transitions.
 - Usability improvements to backup/restore while preserving non-destructive, fully local behavior.
 
 The current product direction excludes in-app image, PDF, and Office previews, as well as cloud synchronization, accounts, collaboration, audio recording, video capture, code editing, predefined workflows, Gantt charts, and completion percentages. They must not be added without an explicit direction change from the human project owner.

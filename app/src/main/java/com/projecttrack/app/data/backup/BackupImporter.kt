@@ -11,6 +11,7 @@ import com.projecttrack.app.data.local.entity.NoteEntity
 import com.projecttrack.app.data.local.entity.NodeEntity
 import com.projecttrack.app.data.local.entity.ProjectEntity
 import com.projecttrack.app.data.repository.TransactionRunner
+import com.projecttrack.app.data.repository.runCommittedDatabaseTransaction
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
@@ -127,18 +128,17 @@ class BackupImporter(
                 ),
             )
             currentCoroutineContext().ensureActive()
-            // 数据库提交是短暂临界区。只对这一段使用 NonCancellable，保证外部取消不会在
-            // “事务已提交、调用方尚未收到返回”窗口触发 catch 并误删已入库附件。
+            // 数据库提交是短暂临界区。只对这一段使用 NonCancellable，并用提交结果持有器
+            // 区分“事务已返回”与“退出 NonCancellable 时收到外部取消”：后者不能删除已入库附件。
             // ZIP 解压、SHA-256 计算和附件复制仍在可取消区间内。
             try {
-                withContext(NonCancellable) {
+                runCommittedDatabaseTransaction {
                     transactions.run {
                         insertRestoredData(data, targetsByFileId)
                     }
                 }
             } catch (cancellation: CancellationException) {
-                // 外部取消不应进入这里（提交临界区为 NonCancellable）；
-                // 若事务自身抛取消，说明提交未正常返回，按未提交处理并清理本次附件。
+                // 只有提交 block 未正常返回时才会走到这里：按未提交处理并清理本次附件。
                 withContext(NonCancellable) { cleanupCopiedFiles(copiedPaths) }
                 throw cancellation
             } catch (error: Exception) {

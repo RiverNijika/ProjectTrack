@@ -74,7 +74,7 @@ fun ProjectListScreen(
         floatingActionButton = {
             ExtendedFloatingActionButton(
                 onClick = onCreateProject,
-                icon = { Icon(Icons.Default.Add, contentDescription = null) },
+                icon = { Icon(Icons.Default.Add, contentDescription = "新建项目") },
                 text = { Text("新建项目") },
             )
         },

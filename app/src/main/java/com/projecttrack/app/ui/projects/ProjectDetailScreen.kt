@@ -180,7 +180,7 @@ fun ProjectDetailScreen(
                             else -> importLauncher.launch(arrayOf("*/*"))
                         }
                     },
-                    icon = { Icon(icon, contentDescription = null) },
+                    icon = { Icon(icon, contentDescription = label) },
                     text = { Text(label) },
                 )
             }

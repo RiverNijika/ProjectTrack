@@ -144,7 +144,7 @@ fun NodeDetailScreen(
             if (uiState.node != null) {
                 ExtendedFloatingActionButton(
                     onClick = { importLauncher.launch(arrayOf("*/*")) },
-                    icon = { Icon(Icons.Default.Add, contentDescription = null) },
+                    icon = { Icon(Icons.Default.Add, contentDescription = "导入文件") },
                     text = { Text("导入文件") },
                 )
             }

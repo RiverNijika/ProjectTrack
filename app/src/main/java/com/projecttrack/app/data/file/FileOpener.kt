@@ -35,11 +35,7 @@ class FileOpener(
                 target,
             )
             val mimeType = resolveMimeType(file)
-            val intent = Intent(Intent.ACTION_VIEW).apply {
-                setDataAndType(uri, mimeType)
-                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                clipData = ClipData.newRawUri(file.displayName, uri)
-            }
+            val intent = buildViewIntent(uri, mimeType, file.displayName)
             context.startActivity(intent)
             Result.Launched
         } catch (_: ActivityNotFoundException) {
@@ -48,6 +44,18 @@ class FileOpener(
             Result.Failed(error.message ?: "无法打开文件")
         }
     }
+
+    /**
+     * 供设备测试验证 Intent 配置；Application Context 启动外部 Activity 必须带
+     * NEW_TASK，否则 API 24+ 会抛 AndroidRuntimeException。
+     */
+    internal fun buildViewIntent(uri: Uri, mimeType: String, displayName: String): Intent =
+        Intent(Intent.ACTION_VIEW).apply {
+            setDataAndType(uri, mimeType)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            clipData = ClipData.newRawUri(displayName, uri)
+        }
 
     /** 为应用内媒体播放提供 content:// URI；文件不存在时返回 null。 */
     fun contentUri(file: StoredFile): Uri? {
