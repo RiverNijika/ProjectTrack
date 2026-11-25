@@ -26,7 +26,7 @@
 
 ## 支持范围
 
-项目尚未发布正式版本，目前没有受支持的发行版本。正式发布后，应在此列出受支持版本及安全更新策略。
+当前受支持版本为 `0.2.0`（versionCode 2）。安全问题优先在最新正式版本中修复；是否回迁至历史版本将根据影响范围、维护成本和升级路径评估。私密报告链接（GitHub Security Advisories）保持不变。
 
 ---
 
@@ -58,4 +58,4 @@ After receiving a report through the private channel, maintainers should:
 
 ## Supported Versions
 
-The project has not made a formal release, so no released version currently receives security support. Supported versions and the security-update policy must be listed here after publication.
+The supported release is `0.2.0` (versionCode 2). Security fixes are prioritized for the latest stable release; backports to older versions are evaluated based on impact, maintenance cost, and the available upgrade path. The private GitHub Security Advisories reporting link remains in place.

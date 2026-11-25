@@ -58,11 +58,13 @@ class BackupImporter(
             val extraction = withContext(Dispatchers.IO) {
                 BackupZipReader.extract(input, temporaryDirectory)
             }
-            val manifest = BackupJson.decodeManifest(
-                text = extraction.manifestJson,
-                expectedDatabaseVersion = databaseVersion,
+            val decoded = BackupCompatibility.decode(
+                manifestJson = extraction.manifestJson,
+                dataJson = extraction.dataJson,
+                currentDatabaseVersion = databaseVersion,
             )
-            val data = BackupJson.decodeData(extraction.dataJson)
+            val manifest = decoded.manifest
+            val data = decoded.data
             BackupValidator.validate(manifest, data, extraction)
 
             mutationGuard.withMutation {

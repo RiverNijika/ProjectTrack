@@ -57,6 +57,8 @@ signingConfig.properties
 
 # Local backup files, database copies and test media (never commit user data)
 *.ptbackup
+# Synthetic, non-user v1 compatibility fixture required by tests.
+!app/src/test/resources/backup-v1-sample.ptbackup
 *.db
 *.db-journal
 *.db-shm

@@ -29,14 +29,14 @@ object BackupJson {
     fun encodeData(data: BackupData): String =
         prettyJson.encodeToString(JsonElement.serializer(), buildData(data))
 
-    fun decodeManifest(text: String, expectedDatabaseVersion: Int): BackupManifest {
+    fun decodeManifest(text: String): BackupManifest {
         val root = parseObject(text, "manifest.json")
         val formatName = root.requiredString("formatName", "manifest.json")
         if (formatName != BackupFormat.FORMAT_NAME) {
             throw BackupValidationException("这不是 ProjectTrack 备份：manifest 格式名称不匹配")
         }
         val formatVersion = root.requiredInt("formatVersion", "manifest.json")
-        if (formatVersion != BackupFormat.FORMAT_VERSION) {
+        if (formatVersion < 1) {
             throw BackupValidationException("不支持的备份格式版本：$formatVersion（当前支持版本 ${BackupFormat.FORMAT_VERSION}）")
         }
         val appVersionName = root.requiredString("appVersionName", "manifest.json")
@@ -48,10 +48,8 @@ object BackupJson {
             throw BackupValidationException("manifest.json 的应用版本号无效")
         }
         val databaseVersion = root.requiredInt("databaseVersion", "manifest.json")
-        if (databaseVersion != expectedDatabaseVersion) {
-            throw BackupValidationException(
-                "备份数据库版本 $databaseVersion 与当前版本 $expectedDatabaseVersion 不兼容，当前版本不支持旧版或新版数据库备份恢复",
-            )
+        if (databaseVersion < 1) {
+            throw BackupValidationException("manifest.json 的数据库版本无效")
         }
         val createdAt = root.requiredLong("createdAt", "manifest.json")
         if (createdAt < 0L) {

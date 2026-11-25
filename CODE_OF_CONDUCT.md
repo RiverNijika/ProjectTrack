@@ -27,9 +27,20 @@
 
 ## 报告与执行
 
-违规行为应通过维护者提供的私密渠道报告。维护者应对报告进行公平、审慎的调查，尊重相关人员的隐私，并根据行为的性质和影响采取适当措施。
+如遇违反本准则的行为，请发送邮件至 **rivernijika@gmail.com**，建议邮件主题为：
 
-当前维护者联系方式和具体执行流程仍需在公开发布前补充。在这些信息补齐前，本准则的执行渠道尚不完整。
+`[ProjectTrack] 行为准则报告 / Code of Conduct Report`
+
+邮件中可说明事件概况、发生时间、相关链接或截图（仅在安全且适合分享时提供），以及你希望的处置方式。请勿在公开 Issue、Discussion 或 Pull Request 中披露报告内容、他人隐私或可识别信息。
+
+维护者应遵循以下原则：
+
+- **保密**：仅在处理报告所必需的最小范围内共享信息，不公开报告者身份或未经同意的私人信息。
+- **公平审查**：审慎、客观地评估事实，给予相关方陈述和回应机会，避免预设立场。
+- **禁止报复**：不得因善意报告或配合调查而排斥、威胁、贬损或报复任何参与者。
+- **适当处置**：根据行为性质、影响和重复情况采取相应措施，并尽可能向报告者说明处理结果的范围。
+
+不承诺无法保证的具体回复时限；如事件涉及即时人身安全风险，请优先联系当地紧急服务。
 
 ---
 
@@ -62,6 +73,17 @@ This Code of Conduct applies to the project repository, issue discussions, code 
 
 ## Reporting and Enforcement
 
-Violations should be reported through a private channel provided by the maintainers. Maintainers should investigate reports fairly and carefully, respect the privacy of everyone involved, and take appropriate action based on the nature and impact of the behavior.
+To report a violation, email **rivernijika@gmail.com** with the suggested subject:
 
-Maintainer contact details and specific enforcement procedures must still be added before public release. Until then, the enforcement channel for this Code of Conduct remains incomplete.
+`[ProjectTrack] 行为准则报告 / Code of Conduct Report`
+
+Please describe what happened, when it occurred, relevant links or screenshots when safe and appropriate to share, and the outcome you are seeking. Do not disclose the report, another person's private information, or identifying details in public issues, discussions, or pull requests.
+
+Maintainers should follow these principles:
+
+- **Confidentiality**: share information only with the smallest group necessary to handle the report; do not publish the reporter's identity or private information without consent.
+- **Fair review**: assess the facts carefully and objectively, give involved parties an opportunity to present their account, and avoid prejudging.
+- **No retaliation**: no one may exclude, threaten, demean, or retaliate against a person for making a good-faith report or participating in an investigation.
+- **Proportionate action**: take action appropriate to the nature, impact, and repetition of the behavior, and communicate the scope of the outcome to the reporter where possible.
+
+No specific response-time commitment is made because it cannot be guaranteed. If an incident involves an immediate risk to personal safety, contact local emergency services first.

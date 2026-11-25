@@ -6,6 +6,8 @@
 >
 > This project is primarily implemented by AI. The human project owner is responsible for requirements, product decisions, license selection, and release governance.
 
+> **正式版本 / Stable Release**：当前为 **0.2.0（versionCode 2）正式版本**，正式签名、覆盖升级与设备验收均已完成。版本说明与下载见 [GitHub Release v0.2.0](https://github.com/RiverNijika/ProjectTrack/releases/tag/v0.2.0)，发布与升级规则见 [RELEASE.md](RELEASE.md)。
+
 ProjectTrack 是一款完全本地化的 Android 项目进度跟踪应用。它围绕一个简单的结构工作：
 
 **项目 + 用户随时定义的进度节点 + 文字记录 + 本地文件资料库。**
@@ -126,11 +128,14 @@ ProjectTrack 的人类项目所有者是项目的**发起人、产品负责人�
 
 | 设备 | 型号/代号 | Android / API | ROM | ABI | 实际结果 |
 | --- | --- | --- | --- | --- | --- |
-| Redmi | M511CD / athens | Android 17 / API 37 | HyperOS OS4.0（V816），安全补丁 2026-10-01 | arm64-v8a | 已安装 Debug APK，完成项目/节点/记录、SAF 导入、预览、备份导出与真实恢复、旋转/重启等验收；修复后完整仪器测试 14/14，提交取消重点用例连续 3/3 |
-| Google Android Emulator | sdk_gphone64_x86_64 / emu64xa | Android 16 / API 36 | Google userdebug `BE2A.250530.026.F3`，安全补丁 2025-07-05 | x86_64 | 修复后提交边界回归：原失败单测 5/5，完整套件 14/14 连续 2 次 |
+| Redmi | M511CD / athens | Android 17 / API 37 | HyperOS OS4.0（V816），安全补丁 2026-10-01 | arm64-v8a | 0.2.0 Debug 仪器测试 **15/15**，提交取消重点用例 **3/3**；已有应用数据保留（27 个附件）；连续返回/外部打开/恢复导航本轮未复现空白窗口。正式签名包在隔离 API 36 AVD 完成升级和干净安装验证。 |
+| Google Android Emulator | sdk_gphone_x86_64 / generic_x86_64 | Android 8.0 / API 26 | Google userdebug AVD | x86_64 | 完整套件 **15/15**，重点提交取消用例 **3/3**；SAF MediaStore 测试按 API29+ 条件跳过 |
+| Google Android Emulator | sdk_gphone_x86_64 / generic_x86_64 | Android 10 / API 29 | Google userdebug AVD | x86_64 | 完整套件 **15/15**（首次有一次 UI 等待超时，隔离复现通过后完整重跑通过），重点用例 **3/3** |
+| Google Android Emulator | sdk_gphone64_x86_64 / emu64x | Android 13 / API 33 | Google userdebug AVD | x86_64 | 完整套件 **15/15**，重点用例 **3/3** |
+| Google Android Emulator | sdk_gphone64_x86_64 / emu64xa | Android 16 / API 36 | Google userdebug AVD | x86_64 | 完整套件 **15/15**，重点用例 **3/3**；正式签名 0.1.0→0.2.0 覆盖升级、旧版 v1 备份恢复、正式签名 0.2.0 干净安装和备份路径均已验证 |
 
-- 本轮实际使用 `emulator-5554`（API 36）完成提交边界修复回归；**API 26、29、31、32、33 以及其它设备/ROM 未验证**。
-- 一台红米设备通过验收不代表兼容所有 Android 手机。发布前仍需覆盖代表性强的最低版本、存储边界版本和主流厂商 ROM。
+- 本轮在 API 26/29/33/36 四个 ProjectTrack 专用 AVD 上执行完整套件和提交取消重点用例；API 29 首次完整套件有 1 次 UI 等待超时，隔离复现通过、完整重跑 15/15 通过，保留为 flaky 记录，未修改测试或产品来掩盖。
+- 红米 API 37 候选版已完成 **15/15** 和重点用例 **3/3**；**API 31、32 以及其它厂商 ROM 未验证**。一台红米通过验收不代表兼容所有 Android 手机。
 
 ### 已执行的设备验收
 
@@ -144,6 +149,9 @@ ProjectTrack 的人类项目所有者是项目的**发起人、产品负责人�
 - 真机 SAF 测试确认 provider 对同一文档 URI 的 `rwt` 写入会截断旧内容。HyperOS 的“另存为”界面对同名文件会自动改名为 `(1)`，因此无法用该 UI 构造真正的覆盖保存；应用采用 `rwt` 优先、`wt` 回退，不接受不保证截断的 `w`。部分文件提供方还会在保存后追加 `.zip`（实际文件名可能为 `.ptbackup.zip`）；恢复按 ZIP 内容、manifest 和数据库版本校验，不依赖扩展名。
 - 发现一次前台空白窗口（连续返回/外部打开后），强制停止并重启后未再复现，也没有崩溃日志；列为遗留风险，发布前继续观察。
 - 由于导出在 15 MB 数据下很快完成，未能在 UI 中拦到“取消任务”按钮；取消/提交边界由真机仪器测试和 JVM 测试覆盖，未把该场景写成人工取消已验证。
+- 0.2.0 候选版在 API 36 隔离 AVD 上完成正式签名旧版 0.1.0 创建数据、导出 v1 备份、覆盖安装正式签名 0.2.0：项目/节点/记录/附件保留；当前版恢复旧版导出备份成功并新增项目副本；冷启动后数据仍在。
+- 正式签名 0.2.0 在另一个干净 API 36 AVD 上完成首次启动、项目/节点/记录/附件创建和备份导出；导出文件为有效 ZIP（manifest 1 项目、1 节点、2 记录、1 文件）。
+- 红米连续执行外部打开/返回 3 轮、项目/列表/备份入口导航；焦点始终为 ProjectTrack 或系统 Resolver，未出现空白窗口。仅能记录“本轮未复现”，不能证明该历史问题不存在。
 
 ### 设备测试命令与 USB 前提
 
@@ -164,7 +172,7 @@ ProjectTrack 的人类项目所有者是项目的**发起人、产品负责人�
    ```bat
    gradlew.bat connectedDebugAndroidTest "-Pandroid.injected.androidTest.leaveApksInstalledAfterRun=true"
    ```
-   本轮结果（修复前）：Redmi M511CD / API 37 实际执行 **11 tests，0 failures，0 errors**；Gradle 同时发现一个未启动的 `emulator-5554`（API 36），在其上安装失败且未执行任何测试（0 tests）。修复提交边界后已在 API 36 模拟器执行 **14 tests，0 failures，0 errors**，连续完整套件 2 次通过；原失败单测连续 5 次通过。修复后已在 Redmi API 37 完成完整仪器测试 14/14，提交取消重点用例连续 3/3。
+   本轮候选结果：API 26/29/33/36 四个 ProjectTrack 专用 AVD 的完整套件各为 **15 tests，0 failures，0 errors**；API 29 首次完整套件有 1 次 UI 等待超时，隔离复现通过、完整重跑通过；四台设备的提交取消重点用例均为 **3/3**。API 26 的 SAF MediaStore 测试按既有 API29+ 条件跳过。红米 API 37 完成 15/15 和重点用例 3/3，已有数据/27 个附件保留；无空白窗口复现。
    或先安装 `app-debug-androidTest.apk`，直接运行：
    ```bat
    adb shell am instrument -w com.projecttrack.app.test/androidx.test.runner.AndroidJUnitRunner
@@ -196,7 +204,7 @@ macOS / Linux：
 ./gradlew testDebugUnitTest
 ```
 
-Debug APK 输出位置：`app/build/outputs/apk/debug/app-debug.apk`。构建产物不提交。
+Debug APK 输出位置：`app/build/outputs/apk/debug/app-debug.apk`。当前正式版本为 `versionCode 2` / `versionName 0.2.0`；unsigned 构建输出为 `app/build/outputs/apk/release/app-release-unsigned.apk` 和 `app/build/outputs/bundle/release/app-release.aab`。正式签名 APK/AAB 已生成并通过校验，随 [GitHub Release v0.2.0](https://github.com/RiverNijika/ProjectTrack/releases/tag/v0.2.0) 发布。构建产物不提交。
 
 ## 测试与当前验证状态
 
@@ -204,33 +212,37 @@ JVM 单元测试位于 `app/src/test/java/`，覆盖首阶段的文件类型识�
 
 Android 仪器测试位于 `app/src/androidTest/java/`，在真实设备上覆盖：真实 Room 外键/级联与节点 detach、真实 Room + 真实文件系统的非破坏性恢复和 ID 重映射、数据库失败回滚、真实 Room 提交边界取消（备份恢复与文件导入）、提交前取消清理、四类损坏备份拒绝、SAF `rwt` 截断、外部打开 Intent 必须带 `NEW_TASK`、Compose 主流程与空/错误状态。
 
-截至 2026-11-24：
+截至 2026-11-25（0.2.0 正式版本）：
 
 - `assembleDebug`：通过。
-- `testDebugUnitTest`：**74 个用例，0 失败、0 错误、0 跳过**；强制重新执行确认。
+- `testDebugUnitTest`：**77 个用例，0 失败、0 错误、0 跳过**。
 - `lint`：通过，**0 errors、4 warnings**。警告为既有非阻断项：lifecycle 自定义 lint 校验跳过、`enableOnBackInvokedCallback` 在 API 33+ 才使用、`allowBackup` 在新系统上的替代提示、`mipmap-anydpi-v26` 可合并；没有新增阻断问题。
-- Android 仪器测试（修复后）：API 36 模拟器 **14 个用例，0 失败、0 错误**，完整套件连续 2 次通过，原失败单测连续 5 次通过；Redmi M511CD / API 37 完整套件 **14/14**，提交取消重点用例连续 **3/3**。
-- Gradle `connectedDebugAndroidTest`（`leaveApksInstalledAfterRun=true`）：在 API 37 红米上曾通过 11/11（修复前），测试后应用数据保留；同一任务发现的 `emulator-5554` 当时未启动，0 tests。修复后的最终验证通过直接 `adb shell am instrument` 在 API 36 模拟器完成 14/14 × 2，并在 Redmi API 37 完成 14/14 及重点用例 3/3。
+- Android 仪器测试：API 26/29/33/36 专用 AVD 各 **15 个用例，0 失败、0 错误**；API 29 首次完整套件有一次 UI 等待超时，隔离复现通过、完整重跑 15/15；四个 API 上的提交取消重点用例均 **3/3**。红米 M511CD / API 37 实际执行 **15/15**，重点用例 **3/3**，已有数据保留（27 个附件）。
+- API 26 的 SAF MediaStore 测试按既有 API29+ 条件跳过。
+- `assembleRelease` / `bundleRelease`：通过。正式签名已完成：Release APK 通过 zipalign 与 `apksigner` v2/v3 验证；AAB 通过 `jarsigner -verify`；两者证书 SHA-256 指纹均为 `48:A8:1F:EE:3B:7E:24:2B:B6:13:E9:F3:86:06:C7:1D:FE:35:09:7A:EA:9D:5C:58:A4:04:81:E1:D7:DB:E6:34`。
+- 正式签名覆盖升级（0.1.0→0.2.0）和正式签名 0.2.0 干净安装均在隔离 API 36 AVD 完成；升级保留项目、节点、记录、附件关系，旧版 v1 备份恢复为项目副本，冷启动后数据仍在。
 - APK 权限检查不含 INTERNET、相机、麦克风或外部存储权限；APK 仅含应用自定义 `DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION`。
-- Room schema 已导出到 `app/schemas/`，数据库版本保持 1。
-- 设备验收已实际完成本项目记录中的主流程、SAF 导入、音频/视频播放、外部打开、备份导出与非破坏性恢复；API 26/29/31/32/33 和其它设备/ROM 未验证，不能宣称“兼容所有 Android 版本”。
+- Room schema 已导出到 `app/schemas/`，数据库版本保持 1；迁移链 `ProjectTrackMigrations.ALL` 为空，已加入 `MigrationTestHelper` 基础设施和 v1 迁移测试；没有 `fallbackToDestructiveMigration`。
+- 固定 v1 合成备份样本已加入 `app/src/test/resources/backup-v1-sample.ptbackup`；备份兼容层分离 formatVersion 与 databaseVersion，未知未来版本会提示升级应用并拒绝恢复。
+- 设备验收已实际完成主流程、SAF 导入、音频/视频播放、外部打开、备份导出与非破坏性恢复；API 26/29/33/36 和红米 API 37 已验证，**API 31/32 及其它 ROM 未验证**，不能宣称“兼容所有 Android 版本”。
+- 测试输出、正式签名产物和验证记录保存在本地私有目录中，未公开上传。
 
 ## 后续优先事项与范围边界
 
 下一阶段优先事项：
 
-- 在 API 26、29、31、32、33 及代表性厂商 ROM 上补做设备矩阵验收；发布前至少覆盖最低版本、存储边界版本和最新目标版本。
-- 为未来的 Room schema 变更补充迁移和迁移测试（当前版本 1）。
+- 由项目所有者最终审核 0.2.0 发布材料、正式签名包、Tag/Release 和发布渠道；当前仍未正式发布。
+- 在 API 31、32 及代表性厂商 ROM 上补做设备矩阵验收。
+- 离线密钥备份按用户决定暂缓，但仍是未完成的风险控制项：需要将密钥库和恢复凭据备份到独立介质/可信密码管理方案，并完成恢复演练。
 - 在支持同名覆盖的 SAF 提供方上补做 UI 级覆盖导出并检查旧尾部；在较大备份下手工验证取消、失败清理和提交边界 UI。
-- 若后续修改事务提交或取消逻辑，需重新在 API 36 或等效环境中执行提交边界回归。
-- 调查一次性空白窗口现象（本轮未复现、无崩溃日志），确认是否与 HyperOS 返回/外部打开过渡有关。
+- 调查一次性空白窗口现象（红米连续外部打开/返回 3 轮及导航本轮未复现），确认是否与 HyperOS 返回/外部打开过渡有关。
 - 备份恢复的可用性改进（仍须保持非破坏性和完全本地化）。
 
 当前产品方向不包含图片、PDF、Office 文件的应用内预览，也不包含云同步、账号、多人协作、音频录制、视频拍摄、代码编辑、预设流程、甘特图或完成百分比。除非人类项目所有者后续明确调整方向，否则不应自行加入。
 
 ## 贡献与行为准则
 
-开始贡献前，请阅读 [贡献指南](CONTRIBUTING.md)、[行为准则](CODE_OF_CONDUCT.md) 和 [安全政策](SECURITY.md)。公开说明文档的新增或修改应同时提供中文和英文内容。
+开始贡献前，请阅读 [贡献指南](CONTRIBUTING.md)、[行为准则](CODE_OF_CONDUCT.md)、[安全政策](SECURITY.md) 和 [发布说明](RELEASE.md)。公开说明文档的新增或修改应同时提供中文和英文内容。
 
 ## 许可证
 
@@ -241,6 +253,8 @@ Android 仪器测试位于 `app/src/androidTest/java/`，在真实设备上覆�
 # ProjectTrack (English)
 
 > **AI-Created / AI 制作**：This project is primarily implemented by AI, with a human project owner responsible for requirements, product decisions, license selection, and release governance.
+
+> **Stable Release**: the current version is **0.2.0 (versionCode 2)**. Production signing, in-place upgrade verification, and device acceptance are complete. See [GitHub Release v0.2.0](https://github.com/RiverNijika/ProjectTrack/releases/tag/v0.2.0) for notes and downloads, and [RELEASE.md](RELEASE.md) for release and upgrade rules.
 
 ProjectTrack is a fully local Android application for tracking project progress. Its core structure is:
 
@@ -362,11 +376,14 @@ At present, architecture, code, tests, and documentation are primarily written b
 
 | Device | Model / codename | Android / API | ROM | ABI | Actual result |
 | --- | --- | --- | --- | --- | --- |
-| Redmi | M511CD / athens | Android 17 / API 37 | HyperOS OS4.0 (V816), security patch 2026-10-01 | arm64-v8a | Installed the Debug APK; completed project/node/note flow, SAF import, previews, real backup export/restore, rotation, restart, and more; post-fix full suite 14/14, focused commit-cancellation test 3/3 |
-| Google Android Emulator | sdk_gphone64_x86_64 / emu64xa | Android 16 / API 36 | Google userdebug `BE2A.250530.026.F3`, security patch 2025-07-05 | x86_64 | Post-fix commit-boundary regression: formerly failing single test 5/5; complete suite 14/14 twice |
+| Redmi | M511CD / athens | Android 17 / API 37 | HyperOS OS4.0 (V816), security patch 2026-10-01 | arm64-v8a | 0.2.0 Debug instrumentation **15/15**, focused commit-cancellation **3/3**; existing app data preserved (27 attachments); repeated back/external-open/restore navigation did not reproduce the blank window this round. Production-signed packages were verified in an isolated API 36 AVD for upgrade and clean install. |
+| Google Android Emulator | sdk_gphone_x86_64 / generic_x86_64 | Android 8.0 / API 26 | Google userdebug AVD | x86_64 | Full suite **15/15**, focused commit-cancellation **3/3**; SAF MediaStore test skipped by its API29+ condition |
+| Google Android Emulator | sdk_gphone_x86_64 / generic_x86_64 | Android 10 / API 29 | Google userdebug AVD | x86_64 | Full suite **15/15** (one UI-wait timeout in the first run; isolated retry passed and the full rerun passed), focused **3/3** |
+| Google Android Emulator | sdk_gphone64_x86_64 / emu64x | Android 13 / API 33 | Google userdebug AVD | x86_64 | Full suite **15/15**, focused **3/3** |
+| Google Android Emulator | sdk_gphone64_x86_64 / emu64xa | Android 16 / API 36 | Google userdebug AVD | x86_64 | Full suite **15/15**, focused **3/3**; production-signed 0.1.0→0.2.0 upgrade, old v1 backup restore, and production-signed 0.2.0 clean install/backup path verified |
 
-- This round used `emulator-5554` (API 36) for the commit-boundary fix verification; **API 26, 29, 31, 32, and 33, as well as other devices/ROMs, were not verified**.
-- One Redmi device passing does not mean compatibility with every Android phone. Before release, representative minimum-version, storage-boundary, and current-target devices/ROMs must still be covered.
+- This round ran the complete suite and focused commit-cancellation test on all four ProjectTrack AVDs (API 26/29/33/36). API 29 had one UI-wait timeout in the first full run; the isolated retry passed and the full rerun passed 15/15. It is recorded as flaky; tests and product code were not modified to hide it.
+- The Redmi API 37 candidate passed **15/15** and focused **3/3**. **API 31/32 and other OEM ROMs were not verified**; one Redmi acceptance does not mean compatibility with every Android phone.
 
 ### Device acceptance performed
 
@@ -380,6 +397,9 @@ At present, architecture, code, tests, and documentation are primarily written b
 - Real SAF verification confirmed that writing with `rwt` to the same provider document truncates the old content. HyperOS's save dialog auto-renames same-name files to `(1)`, so a true overwrite could not be constructed through that UI; the app prefers `rwt`, falls back to `wt`, and refuses non-truncating `w`. Some providers also append `.zip` after saving (the actual name may be `.ptbackup.zip`); restore validates the ZIP content, manifest, and database version and does not depend on the extension.
 - One transient blank foreground window was observed after repeated back/external-open interactions; it did not reproduce after force-stop/restart and no crash log was found. It remains a monitored risk.
 - The 15 MB export completed too quickly to intercept the “cancel” button in the UI; cancellation/commit-boundary semantics were covered by device instrumentation and JVM tests, and manual cancellation is not claimed as verified.
+- The production-signed 0.2.0 candidate completed a real in-place upgrade from production-signed 0.1.0 on an isolated API 36 AVD: the old version created 1 project, 2 nodes, 2 notes, and 1 attachment and exported a v1 backup; after installing 0.2.0 over it, all data/relationships/attachments remained. The current version restored the old v1 backup as one new project copy; both projects survived a cold start.
+- Production-signed 0.2.0 also completed a clean install on another fresh API 36 AVD: first launch, project/node/note/attachment creation, and a valid backup export (manifest: 1 project, 1 node, 2 notes, 1 file).
+- On the Redmi, three external-open/back cycles plus project/list/backup navigation kept focus on ProjectTrack or the system resolver; no blank window appeared. This round can only say “not reproduced,” not “proven absent.”
 
 ### Device test commands and USB prerequisites
 
@@ -400,7 +420,7 @@ At present, architecture, code, tests, and documentation are primarily written b
    ```bat
    gradlew.bat connectedDebugAndroidTest "-Pandroid.injected.androidTest.leaveApksInstalledAfterRun=true"
    ```
-   The pre-fix run produced **11 tests, 0 failures, 0 errors** on the Redmi M511CD / API 37. Gradle also discovered a non-running `emulator-5554` (API 36), which ran **0 tests**. After the commit-boundary fix, the API 36 emulator ran the final **14 tests, 0 failures, 0 errors** twice in succession, and the formerly failing test passed 5 consecutive runs. The fixed build then passed the full 14/14 suite on Redmi API 37, with the focused commit-cancellation test passing 3 consecutive runs.
+   The candidate result: the API 26/29/33/36 ProjectTrack AVDs each ran the full suite with **15 tests, 0 failures, 0 errors**; API 29 had one UI-wait timeout in its first full run, which passed when isolated and passed on a full rerun; the focused commit-cancellation test passed **3/3** on all four. The API 26 SAF MediaStore test was skipped by its existing API29+ condition. The Redmi API 37 passed 15/15 plus focused 3/3 with existing data/27 attachments preserved; no blank window was reproduced.
    Alternatively install `app-debug-androidTest.apk` and run:
    ```bat
    adb shell am instrument -w com.projecttrack.app.test/androidx.test.runner.AndroidJUnitRunner
@@ -432,7 +452,7 @@ macOS / Linux:
 ./gradlew testDebugUnitTest
 ```
 
-The Debug APK is generated at `app/build/outputs/apk/debug/app-debug.apk`. Build artifacts must not be committed.
+The Debug APK is generated at `app/build/outputs/apk/debug/app-debug.apk`. The stable version is `versionCode 2` / `versionName 0.2.0`; unsigned Release outputs are `app/build/outputs/apk/release/app-release-unsigned.apk` and `app/build/outputs/bundle/release/app-release.aab`. Production-signed APK/AAB artifacts are verified and distributed through [GitHub Release v0.2.0](https://github.com/RiverNijika/ProjectTrack/releases/tag/v0.2.0). Build artifacts must not be committed.
 
 ## Tests and Current Verification
 
@@ -440,33 +460,37 @@ JVM unit tests under `app/src/test/java/` cover the phase-one behaviors (file cl
 
 Android instrumentation tests under `app/src/androidTest/java/` run on a real device and cover real Room foreign-key/cascade/detach behavior, non-destructive restore and ID remapping with real Room + the real filesystem, database failure rollback, real-Room commit-boundary cancellation for both backup restore and file import, pre-commit cleanup, four corrupted-backup rejections, SAF `rwt` truncation, the external-open `NEW_TASK` intent, and Compose main/empty/error flows.
 
-As of November 24, 2026:
+As of November 25, 2026 (0.2.0 release candidate):
 
 - `assembleDebug`: passed.
-- `testDebugUnitTest`: **74 tests, 0 failures, 0 errors, 0 skipped**; forcibly rerun.
+- `testDebugUnitTest`: **77 tests, 0 failures, 0 errors, 0 skipped**.
 - `lint`: passed with **0 errors and 4 warnings**. The warnings are existing non-blocking items: lifecycle custom lint checks skipped, `enableOnBackInvokedCallback` only used on API 33+, an `allowBackup` replacement hint, and a mergeable `mipmap-anydpi-v26` folder.
-- Device instrumentation after the fix: the API 36 emulator passed **14 tests, 0 failures, 0 errors** twice in succession and the formerly failing test passed 5 consecutive runs; Redmi M511CD / API 37 passed the full suite **14/14**, with the focused commit-cancellation test passing **3/3**.
-- Gradle `connectedDebugAndroidTest` with `leaveApksInstalledAfterRun=true`: **11/11 passed on the pre-fix Redmi build**, and app data remained installed. The emulator discovered by that run was not yet booted and executed 0 tests. Final post-fix verification used direct `adb shell am instrument`: 14/14 twice on the API 36 emulator, then 14/14 on Redmi API 37 plus 3/3 focused commit-cancellation runs.
-- APK permission inspection found no Internet, camera, microphone, or external-storage permissions; only the app-defined `DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION` remains.
-- The Room schema is exported to `app/schemas/` and the database version remains 1.
-- Actual device acceptance covered the project/node/note flow, SAF imports, audio/video playback, external opening, backup export, and non-destructive restore. API 26/29/31/32/33 and other devices/ROMs were **not** verified, so “compatible with all Android versions” must not be claimed.
+- Android instrumentation: each API 26/29/33/36 ProjectTrack AVD passed **15 tests, 0 failures, 0 errors**; API 29 had one UI-wait timeout in its first full run, the isolated retry passed and the full rerun passed 15/15. The focused commit-cancellation test passed **3/3** on all four APIs. The Redmi API 37 passed **15/15** with focused **3/3**, and its existing 27 attachments were preserved.
+- API 26's SAF MediaStore test was skipped by its existing API29+ condition.
+- `assembleRelease` / `bundleRelease`: passed. Production signing is complete: Release APK passes zipalign and `apksigner` v2/v3 verification; AAB passes `jarsigner -verify`; both use certificate SHA-256 fingerprint `48:A8:1F:EE:3B:7E:24:2B:B6:13:E9:F3:86:06:C7:1D:FE:35:09:7A:EA:9D:5C:58:A4:04:81:E1:D7:DB:E6:34`.
+- Production-signed 0.1.0→0.2.0 upgrade and production-signed 0.2.0 clean install were completed on isolated API 36 AVDs; upgrade data/relationships/attachments, old v1 backup restore, backup export, and cold start were verified.
+- APK permissions have no Internet, camera, microphone, or external-storage permission; only the app-defined `DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION` remains.
+- The Room schema is exported to `app/schemas/` and remains version 1. `ProjectTrackMigrations.ALL` is empty; `MigrationTestHelper` infrastructure and a v1 migration test were added, with no destructive fallback.
+- A fixed synthetic v1 backup fixture was added at `app/src/test/resources/backup-v1-sample.ptbackup`. The compatibility layer separates formatVersion from databaseVersion; unknown future versions require an app upgrade and are rejected.
+- Device acceptance actually covered the main flow, SAF imports, audio/video playback, external opening, backup export, and non-destructive restore. API 26/29/33/36 and Redmi API 37 were verified; **API 31/32 and other ROMs were not**, so “compatible with all Android versions” must not be claimed.
+- Production-signed packages are distributed through GitHub Releases; test outputs and verification records remain in the local private directory.
 
 ## Next Priorities and Scope Boundaries
 
 Next-phase priorities:
 
-- Extend device acceptance to API 26, 29, 31, 32, and 33 with representative OEM ROMs; before release, cover at minimum the minimum version, storage-boundary versions, and the current target.
-- If transaction-commit or cancellation logic changes again, rerun commit-boundary regression on API 36 or an equivalent environment.
-- Add migrations and migration tests for future Room schema changes (the current version is 1).
+- Continue post-release compatibility and reliability work without altering the published 0.2.0 artifacts or certificate fingerprint.
+- Extend device acceptance to API 31, 32, and representative OEM ROMs.
+- Offline key backup is deferred by the owner but remains an unfinished risk-control item: the keystore and recovery credential must be backed up to independent media or a trusted password-management solution, with a restore drill.
 - Exercise UI-level overwrite export on a SAF provider that supports same-name replacement, and verify stale-tail truncation there. Manually exercise cancellation, failure cleanup, and the commit-boundary UI with a larger backup.
-- Investigate the one-off blank-window observation (not reproduced in this round; no crash log) and determine whether it relates to HyperOS back/external-open transitions.
+- Investigate the one-off blank-window observation (not reproduced this round after three external-open/back cycles and navigation) and determine whether it relates to HyperOS back/external-open transitions.
 - Usability improvements to backup/restore while preserving non-destructive, fully local behavior.
 
 The current product direction excludes in-app image, PDF, and Office previews, as well as cloud synchronization, accounts, collaboration, audio recording, video capture, code editing, predefined workflows, Gantt charts, and completion percentages. They must not be added without an explicit direction change from the human project owner.
 
 ## Contributing and Conduct
 
-Read the [Contributing Guide](CONTRIBUTING.md), [Code of Conduct](CODE_OF_CONDUCT.md), and [Security Policy](SECURITY.md) before contributing. New or updated public documentation should provide both Chinese and English content.
+Read the [Contributing Guide](CONTRIBUTING.md), [Code of Conduct](CODE_OF_CONDUCT.md), [Security Policy](SECURITY.md), and [Release Guide](RELEASE.md) before contributing. New or updated public documentation should provide both Chinese and English content.
 
 ## License
 

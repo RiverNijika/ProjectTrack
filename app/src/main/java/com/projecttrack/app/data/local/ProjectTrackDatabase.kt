@@ -42,6 +42,8 @@ abstract class ProjectTrackDatabase : RoomDatabase() {
                 context.applicationContext,
                 ProjectTrackDatabase::class.java,
                 DATABASE_NAME,
-            ).build()
+            )
+                .addMigrations(*ProjectTrackMigrations.ALL)
+                .build()
     }
 }
